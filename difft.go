@@ -1,4 +1,4 @@
-package difft
+package godifft
 
 type Change int
 

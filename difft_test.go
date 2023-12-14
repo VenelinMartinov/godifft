@@ -1,4 +1,4 @@
-package difft_test
+package godifft_test
 
 import (
 	"testing"
