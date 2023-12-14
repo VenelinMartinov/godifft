@@ -109,3 +109,94 @@ func (d *differ[T]) remove(x T) Edit[T] {
 func (d *differ[T]) keep(x T) Edit[T] {
 	return Edit[T]{Keep, x}
 }
+
+type Differ[T any, Diff any] interface {
+	Added(T) Diff
+	Removed(T) Diff
+	Diff(T, T) (Diff, bool)
+}
+
+func DiffMapT[K comparable, T, R any](
+	differ Differ[T, R],
+	m1, m2 map[K]T,
+) map[K]R {
+	diffmap := map[K]R{}
+	for k, xvv := range m1 {
+		yvv, ok := m2[k]
+		if !ok {
+			diffmap[k] = differ.Removed(xvv)
+		} else {
+			xdy, xneqy := differ.Diff(xvv, yvv)
+			if xneqy {
+				diffmap[k] = xdy
+			}
+		}
+	}
+	for k, yvv := range m2 {
+		if _, ok := m1[k]; !ok {
+			diffmap[k] = differ.Added(yvv)
+		}
+	}
+	return diffmap
+}
+
+type treeDiffer struct {
+	innerDiffer Differ[interface{}, interface{}]
+	equals      func(interface{}, interface{}) bool
+}
+
+var _ Differ[interface{}, interface{}] = &treeDiffer{}
+
+func (t *treeDiffer) Added(x interface{}) interface{} {
+	return t.innerDiffer.Added(x)
+}
+
+func (t *treeDiffer) Removed(x interface{}) interface{} {
+	return t.innerDiffer.Removed(x)
+}
+
+func (t *treeDiffer) Diff(tree1, tree2 interface{}) (interface{}, bool) {
+	switch xv := tree1.(type) {
+	case []interface{}:
+		switch yv := tree2.(type) {
+		case []interface{}:
+			d := []interface{}{}
+			diffs := DiffT(xv, yv, DiffTOptions[interface{}]{t.equals})
+			eq := true
+			for _, ed := range diffs {
+				switch ed.Change {
+				case Insert:
+					d = append(d, t.Added(ed.Element))
+					eq = false
+				case Remove:
+					d = append(d, t.Removed(ed.Element))
+					eq = false
+				case Keep:
+					d = append(d, ed.Element)
+				}
+			}
+			return d, !eq
+		default:
+			return t.innerDiffer.Diff(xv, yv)
+		}
+	case map[string]interface{}:
+		switch yv := tree2.(type) {
+		case map[string]interface{}:
+			m := DiffMapT(t, xv, yv)
+			return m, len(m) > 0
+		default:
+			return t.innerDiffer.Diff(tree1, tree2)
+		}
+	default:
+		return t.innerDiffer.Diff(tree1, tree2)
+	}
+}
+
+func DiffTree[Diff any](
+	differ Differ[interface{}, interface{}],
+	equals func(interface{}, interface{}) bool,
+	tree1, tree2 interface{},
+) (interface{}, bool) {
+	td := &treeDiffer{differ, equals}
+	return td.Diff(tree1, tree2)
+}
