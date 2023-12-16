@@ -192,7 +192,7 @@ func (t *treeDiffer) Diff(tree1, tree2 interface{}) (interface{}, bool) {
 	}
 }
 
-func DiffTree[Diff any](
+func DiffTree(
 	differ Differ[interface{}, interface{}],
 	equals func(interface{}, interface{}) bool,
 	tree1, tree2 interface{},
