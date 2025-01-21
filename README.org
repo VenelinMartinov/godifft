@@ -1,3 +1,5 @@
 * godifft
 
 Diff algorithms with generics, working on any structure.
+
+Forked from https://github.com/t0yv0/godifft

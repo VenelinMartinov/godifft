@@ -1,4 +1,4 @@
-module github.com/t0yv0/godifft
+module github.com/VenelinMartinov/godifft
 
 go 1.21.4
 
